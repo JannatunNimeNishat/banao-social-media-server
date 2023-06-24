@@ -29,25 +29,26 @@ async function run() {
 
         //all collections
         const usersCollection = client.db('BanaoSocialMediaDb').collection('users')
+        const postsCollection = client.db('BanaoSocialMediaDb').collection('posts')
 
 
         // authentication related apis
 
         //check the user is already exist or not
-        const checkIsExist = async(req,res,next) =>{
+        const checkIsExist = async (req, res, next) => {
             const newUser = req.body;
-            const query = {email: newUser.email}
-            const isExist =  await usersCollection.findOne(query);
+            const query = { email: newUser.email }
+            const isExist = await usersCollection.findOne(query);
             console.log(isExist);
-            if(isExist){
-                return res.send({error:true, message:'already has a account with this email please login'})
+            if (isExist) {
+                return res.send({ error: true, message: 'already has a account with this email please login' })
             }
             next()
         }
 
 
         //create new user
-        app.post('/signUp',checkIsExist, async (req, res) => {
+        app.post('/signUp', checkIsExist, async (req, res) => {
             const newUser = req.body;
 
             console.log(newUser);
@@ -57,35 +58,55 @@ async function run() {
         })
 
 
-           //login user api
-        app.post('/signIn', async(req,res)=>{
+        //login user api
+        app.post('/signIn', async (req, res) => {
             const user = req.body;
-            const query = {email: user.email}
-            const isExist =  await usersCollection.findOne(query);
-             if(!isExist){
-                return res.send({error:true, message:'no user found with this email please register'})
-             }
-            
-             if(user.password !== isExist.password){
-                return res.send({error:true, message:'invalid password'})
-                
-             }
+            const query = { email: user.email }
+            const isExist = await usersCollection.findOne(query);
+            if (!isExist) {
+                return res.send({ error: true, message: 'no user found with this email please register' })
+            }
 
-             res.send({ email: isExist.email})
+            if (user.password !== isExist.password) {
+                return res.send({ error: true, message: 'invalid password' })
 
-        }) 
+            }
+
+            res.send({ email: isExist.email })
+
+        })
 
         //get logged in user data
-        app.get('/user/:email', async(req,res)=>{
+        app.get('/user/:email', async (req, res) => {
             const userEmail = req.params.email;
-            const query = {email: userEmail}
+            const query = { email: userEmail }
             console.log(userEmail);
             const result = await usersCollection.findOne(query);
-            if(!result){
-                return res.send({error:true, message:'unauthorized acces'})
+            if (!result) {
+                return res.send({ error: true, message: 'unauthorized acces' })
             }
 
             res.send(result)
+        })
+
+
+        //social post CRUD
+        //crate a post 
+        app.post('/add-post', async (req, res) => {
+            const newPost = req.body;
+            //console.log(newPost);
+            const result = await postsCollection.insertOne(newPost)
+            res.send(result)
+        })
+
+        //get all posts
+        app.get('/user-posts/:email', async (req, res) => {
+            const userEmail = req.params.email;
+            console.log(userEmail);
+            const query = { email: userEmail?.email }
+            const result = await postsCollection.find(query).toArray();
+            res.send(result)
+
         })
 
 
