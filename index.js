@@ -10,7 +10,7 @@ app.use(express.json())
 
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.oth2isl.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -51,9 +51,9 @@ async function run() {
         app.post('/signUp', checkIsExist, async (req, res) => {
             const newUser = req.body;
 
-            console.log(newUser);
+           // console.log(newUser);
             const result = await usersCollection.insertOne(newUser)
-            console.log(result);
+            //console.log(result);
             res.send(result)
         })
 
@@ -80,7 +80,7 @@ async function run() {
         app.get('/user/:email', async (req, res) => {
             const userEmail = req.params.email;
             const query = { email: userEmail }
-            console.log(userEmail);
+           // console.log(userEmail);
             const result = await usersCollection.findOne(query);
             if (!result) {
                 return res.send({ error: true, message: 'unauthorized acces' })
@@ -99,16 +99,84 @@ async function run() {
             res.send(result)
         })
 
-        //get all posts
+        //get all posts by a specific user
         app.get('/user-posts/:email', async (req, res) => {
             const userEmail = req.params.email;
-            console.log(userEmail);
-            const query = { email: userEmail?.email }
+            /* console.log(userEmail);
+            const query = { user_email: userEmail?.email }
             const result = await postsCollection.find(query).toArray();
-            res.send(result)
+            console.log(result);
+            res.send(result) */
+
+            const allPosts = await postsCollection.find().toArray()
+            const specificUserPosts = allPosts.filter(posts => posts.user_email === userEmail)
+            
+            res.send(specificUserPosts)
+
+
 
         })
 
+        //delete a post
+        app.delete('/delete-post/:id', async(req,res)=>{
+            const post_id = req.params.id
+            //console.log(post_id);
+            const query = {_id: new ObjectId(post_id)}
+            const result = await postsCollection.deleteOne(query)
+            res.send(result)
+        })
+
+        //get a post by id
+        app.get('/get-a-post/:id', async(req,res)=>{
+            const post_id = req.params.id
+            //console.log(post_id);
+            const query = {_id: new ObjectId(post_id)}
+            const result = await postsCollection.findOne(query)
+            res.send(result)
+        })
+
+        //UPDATE a post
+        app.put('/update-a-post/:id', async(req,res)=>{
+            const post_id = req.params.id;
+           // console.log(post_id);
+            const updated_data = req.body;
+            const filter = {_id: new ObjectId(post_id)}
+            const options = {upsert: false}
+            const update_post = {
+                $set:{              
+                    post_image: updated_data.image,
+                    post_description: updated_data.post_description
+                }
+            }
+            //console.log(updated_data.image, updated_data.post_description,update_post);
+            const result = await postsCollection.updateOne(filter,update_post,options)
+            console.log(result);
+            res.send(result)
+            
+        })
+
+        //home page apis
+        app.get('/all-posts', async(req,res)=>{
+            const result = await postsCollection.find().toArray()
+            //console.log(result);
+            res.send(result)
+            
+        })
+
+        // add like
+        app.put('/add-like/:id', async(req,res)=>{
+            const post_id = req.params.id;
+            
+           
+            console.log(post_id);
+            const result = await postsCollection.findOneAndUpdate(
+                { _id: new ObjectId(post_id) },
+                { $inc: { total_like: 1 } }
+              );
+          res.send(result)
+        })
+
+        
 
 
         // Send a ping to confirm a successful connection
